@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Notes — Amazon VPC (Basics)</title>
+<style>
+  :root{
+    --bg:#ffffff; --text:#37352f; --muted:#787774; --line:#e9e9e7; --accent:#2383e2;
+    --green-bg:#ddedea; --green-tx:#1c7c54;
+    --red-bg:#fbe4e4;  --red-tx:#c0392b;
+    --yel-bg:#fbf3db;  --yel-tx:#9a7c1a;
+    --blu-bg:#e7f3f8;  --blu-tx:#1a6a8a;
+    --pur-bg:#f0e9fa;  --pur-tx:#6940a5;
+    --code-bg:#f7f6f3; --chip:#f1f1ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f6f5f3;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    line-height:1.65;font-size:16px;}
+  .page{max-width:840px;margin:0 auto;background:var(--bg);min-height:100vh;padding:0 0 120px;
+    box-shadow:0 0 0 1px rgba(15,15,15,.04),0 4px 28px rgba(15,15,15,.06);}
+  .cover{height:150px;background:linear-gradient(120deg,#ff9900 0%,#2383e2 50%,#7c3aed 100%);}
+  .head{padding:0 70px}
+  .emoji{font-size:60px;line-height:1;margin-top:-44px;display:inline-block;background:#fff;
+    border-radius:12px;padding:4px 8px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+  h1{font-size:38px;font-weight:800;letter-spacing:-.02em;margin:18px 0 6px}
+  .subtitle{color:var(--muted);font-size:15px;margin:0 0 6px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+  .chip{background:var(--chip);color:var(--muted);font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:20px}
+  .content{padding:10px 70px 0}
+  h2{font-size:27px;font-weight:700;letter-spacing:-.01em;margin:48px 0 8px;padding-top:18px;border-top:1px solid var(--line)}
+  h3{font-size:19px;font-weight:700;margin:28px 0 6px}
+  h4{font-size:13px;font-weight:700;margin:18px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  p{margin:10px 0}
+  a{color:var(--accent);text-decoration:none}
+  ul,ol{margin:10px 0;padding-left:24px}
+  li{margin:5px 0}
+  code{background:var(--code-bg);border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+    font-size:13.5px;font-family:"SF Mono",Menlo,Consolas,monospace;color:#b03a2e}
+  .toc{background:#fafafa;border:1px solid var(--line);border-radius:10px;padding:18px 24px;margin:24px 0}
+  .toc h4{margin-top:0}
+  .toc ol{padding-left:20px;columns:2;column-gap:32px}
+  .toc a{color:var(--text);font-weight:500}
+  .toc a:hover{color:var(--accent)}
+  .callout{display:flex;gap:12px;border-radius:8px;padding:14px 16px;margin:16px 0;font-size:15px}
+  .callout .ico{font-size:18px;line-height:1.5}
+  .callout p{margin:0}
+  .callout.green{background:var(--green-bg)} .callout.red{background:var(--red-bg)}
+  .callout.yellow{background:var(--yel-bg)} .callout.blue{background:var(--blu-bg)}
+  .callout.purple{background:var(--pur-bg)} .callout.gray{background:#f1f1ef}
+  .qcard{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;
+    padding:14px 18px;margin:18px 0;background:#fbfcfe}
+  .qlabel{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+  .qtext{font-size:15.5px;font-weight:600;margin:5px 0 0}
+  .flow{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:18px;margin:16px 0;text-align:center;
+    font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13.5px}
+  .node{display:inline-block;background:#fff;border:1.5px solid #cfcfca;border-radius:8px;padding:7px 14px;
+    font-weight:600;font-size:13px;margin:4px;font-family:-apple-system,sans-serif}
+  .node.primary{border-color:#2383e2;color:#1a6a8a;background:#e7f3f8}
+  .node.replica{border-color:#1c7c54;color:#1c7c54;background:#ddedea}
+  .node.fail{border-color:#c0392b;color:#c0392b;background:#fbe4e4}
+  .node.cache{border-color:#9a7c1a;color:#9a7c1a;background:#fbf3db}
+  .node.purple{border-color:#6940a5;color:#6940a5;background:#f0e9fa}
+  .arrow{display:block;color:var(--muted);font-size:16px;margin:2px 0;font-weight:700}
+  .arrow.h{display:inline-block;margin:0 6px}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#fafafa;font-weight:700}
+  td .yes{color:var(--green-tx);font-weight:700}
+  td .no{color:var(--red-tx);font-weight:700}
+  .divider{height:1px;background:var(--line);margin:30px 0}
+
+  /* slide-style SVG figures */
+  .fig{margin:20px 0;border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px;text-align:center}
+  .fig svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .fig .cap{font-size:12.5px;color:var(--muted);margin-top:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+
+  /* interactive quiz */
+  .quiz-meta{display:flex;align-items:center;gap:14px;margin:16px 0 22px;flex-wrap:wrap}
+  .quiz-score{background:var(--accent);color:#fff;font-weight:700;font-size:14px;padding:6px 14px;border-radius:20px}
+  .quiz-reset{background:#fff;border:1px solid var(--line);color:var(--text);font-weight:600;font-size:13.5px;
+    padding:6px 14px;border-radius:20px;cursor:pointer}
+  .quiz-reset:hover{background:#fafafa}
+  .quiz-q{border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:16px 0;background:#fcfcfb}
+  .quiz-q .qn{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+  .quiz-q .qbody{font-weight:600;margin:5px 0 12px}
+  .opt{border:1px solid var(--line);border-radius:7px;padding:10px 14px;margin:7px 0;font-size:14.5px;
+    display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .12s,border-color .12s}
+  .opt:hover{background:#f5f8fc;border-color:#bcd9f2}
+  .opt .dot{width:15px;height:15px;border:2px solid #cfcfca;border-radius:50%;flex:none;display:flex;
+    align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+  .opt .txt{flex:1}
+  .quiz-q.done .opt{cursor:default}
+  .quiz-q.done .opt:hover{background:#fff}
+  .opt.correct{background:var(--green-bg);border-color:#7bbf9e;font-weight:600}
+  .opt.correct:hover{background:var(--green-bg)}
+  .opt.correct .dot{background:var(--green-tx);border-color:var(--green-tx)}
+  .opt.correct .dot::after{content:"✓"}
+  .opt.wrong{background:var(--red-bg);border-color:#e0a3a3;font-weight:600}
+  .opt.wrong:hover{background:var(--red-bg)}
+  .opt.wrong .dot{background:var(--red-tx);border-color:var(--red-tx)}
+  .opt.wrong .dot::after{content:"✕"}
+  .exp{display:none;margin-top:10px;padding:10px 12px;background:var(--green-bg);border-radius:7px;color:#1c5e44;font-size:14px}
+  .exp b{color:var(--green-tx)}
+  .quiz-q.done .exp{display:block}
+  footer{padding:30px 70px 0;color:var(--muted);font-size:13px}
+  @media(max-width:680px){.head,.content,footer{padding-left:24px;padding-right:24px}h1{font-size:28px}.toc ol{columns:1}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="cover"></div>
+  <div class="head">
+    <span class="emoji">🌐</span>
+    <h1>Amazon VPC — Basics</h1>
+    <p class="subtitle">Complete notes — VPC &amp; Subnets · CIDR · Internet &amp; NAT Gateways · NACL vs Security Groups · VPC Flow Logs · VPC Peering · VPC Endpoints · Site-to-Site VPN &amp; Direct Connect · 3-tier architecture</p>
+    <div class="meta">
+      <span class="chip">🏠 VPC</span><span class="chip">🧩 Subnets</span>
+      <span class="chip">🚪 IGW / NAT</span><span class="chip">🛡️ NACL / SG</span>
+      <span class="chip">🔗 Peering</span><span class="chip">📦 Endpoints</span>
+      <span class="chip">🔌 VPN / DX</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="toc">
+      <h4>📑 Contents</h4>
+      <ol>
+        <li><a href="#intro">VPC crash-course &amp; scope</a></li>
+        <li><a href="#primer">VPC &amp; Subnets primer</a></li>
+        <li><a href="#cidr">CIDR &amp; the VPC diagram</a></li>
+        <li><a href="#igw">Internet Gateway &amp; NAT Gateways</a></li>
+        <li><a href="#firewall">NACL &amp; Security Groups</a></li>
+        <li><a href="#compare">NACL vs SG comparison</a></li>
+        <li><a href="#flow">VPC Flow Logs</a></li>
+        <li><a href="#peering">VPC Peering</a></li>
+        <li><a href="#endpoints">VPC Endpoints</a></li>
+        <li><a href="#hybrid">Site-to-Site VPN &amp; Direct Connect</a></li>
+        <li><a href="#arch">3-tier &amp; real-world architectures</a></li>
+        <li><a href="#recap">Closing recap</a></li>
+        <li><a href="#scenarios">Scenario-based questions (10)</a></li>
+        <li><a href="#quiz">Practice quiz (22 questions)</a></li>
+      </ol>
+    </div>
+
+    <!-- ============ INTRO ============ -->
+    <h2 id="intro">1 · VPC crash-course &amp; scope</h2>
+    <p>A <strong>VPC (Virtual Private Cloud)</strong> is your own private, logically isolated network inside AWS, where you launch and connect your resources. You should know it in depth for the <strong>Solutions Architect Associate</strong> and <strong>SysOps Administrator</strong> exams; at the <strong>Developer</strong> level it's lighter — usually 1–2 questions.</p>
+    <p>The building blocks to know:</p>
+    <ul>
+      <li>VPC, Subnets, Internet Gateways &amp; NAT Gateways</li>
+      <li>Security Groups, Network ACL (NACL), VPC Flow Logs</li>
+      <li>VPC Peering, VPC Endpoints</li>
+      <li>Site-to-Site VPN &amp; Direct Connect</li>
+    </ul>
+    <div class="callout blue">
+      <span class="ico">🧭</span>
+      <p>Don't stress if it doesn't all click at once. These are the networking foundations that everything else (EC2, RDS, Lambda, ELB) is deployed <em>into</em> — they get clearer as you see them reused throughout AWS.</p>
+    </div>
+
+    <!-- ============ PRIMER ============ -->
+    <h2 id="primer">2 · VPC &amp; Subnets primer</h2>
+    <p>Two foundational definitions:</p>
+    <ul>
+      <li><strong>VPC</strong> = a private network to deploy your resources. It is a <strong>regional</strong> resource (spans all Availability Zones in one Region).</li>
+      <li><strong>Subnets</strong> let you <em>partition</em> the network inside your VPC. A subnet is an <strong>Availability Zone</strong> resource (it lives in exactly one AZ).</li>
+    </ul>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 460" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="460" fill="#ffffff"/>
+        <text x="30" y="40" font-size="26" font-weight="700" fill="#37352f">VPC &amp; Subnets Primer</text>
+        <text x="600" y="40" font-size="16" font-weight="700" fill="#37352f">www</text>
+        <line x1="610" y1="48" x2="610" y2="110" stroke="#37352f" stroke-width="2" marker-end="url(#ar)"/>
+        <line x1="610" y1="110" x2="610" y2="48" stroke="#37352f" stroke-width="2" marker-end="url(#ar)"/>
+        <rect x="380" y="70" width="350" height="360" rx="6" fill="none" stroke="#232f3e" stroke-width="2"/>
+        <rect x="392" y="82" width="34" height="34" rx="6" fill="#7c3aed"/>
+        <text x="409" y="105" font-size="18" fill="#fff" text-anchor="middle">☁</text>
+        <rect x="420" y="120" width="280" height="290" rx="14" fill="none" stroke="#ff9900" stroke-width="2.5" stroke-dasharray="8 6"/>
+        <text x="560" y="400" font-size="15" font-weight="700" fill="#37352f" text-anchor="middle">AZ A</text>
+        <rect x="450" y="145" width="220" height="110" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
+        <rect x="448" y="138" width="22" height="22" rx="4" fill="#d99e00"/>
+        <text x="459" y="154" font-size="13" fill="#fff" text-anchor="middle">🔒</text>
+        <rect x="535" y="165" width="48" height="48" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="559" y="197" font-size="22" text-anchor="middle">🖥</text>
+        <text x="560" y="240" font-size="14" font-weight="600" fill="#37352f" text-anchor="middle">Public Subnet</text>
+        <rect x="450" y="280" width="220" height="110" rx="8" fill="#e7f3f8" stroke="#1565c0" stroke-width="1.5"/>
+        <rect x="448" y="273" width="22" height="22" rx="4" fill="#d99e00"/>
+        <text x="459" y="289" font-size="13" fill="#fff" text-anchor="middle">🔒</text>
+        <rect x="535" y="300" width="48" height="48" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="559" y="332" font-size="22" text-anchor="middle">🖥</text>
+        <text x="560" y="375" font-size="14" font-weight="600" fill="#37352f" text-anchor="middle">Private Subnet</text>
+        <text x="30" y="100" font-size="14.5" fill="#37352f"><tspan font-weight="700">VPC:</tspan> private network to deploy</text>
+        <text x="30" y="122" font-size="14.5" fill="#37352f">your resources (regional resource)</text>
+        <text x="30" y="158" font-size="14.5" fill="#37352f"><tspan font-weight="700">Subnets</tspan> partition the network</text>
+        <text x="30" y="180" font-size="14.5" fill="#37352f">inside your VPC (AZ resource)</text>
+        <text x="30" y="216" font-size="14.5" fill="#37352f"><tspan font-weight="700">Public subnet</tspan> = accessible</text>
+        <text x="30" y="238" font-size="14.5" fill="#37352f">from the internet</text>
+        <text x="30" y="274" font-size="14.5" fill="#37352f"><tspan font-weight="700">Private subnet</tspan> = not accessible</text>
+        <text x="30" y="296" font-size="14.5" fill="#37352f">from the internet</text>
+        <text x="30" y="332" font-size="14.5" fill="#37352f">Access is defined using</text>
+        <text x="30" y="354" font-size="14.5" font-weight="700" fill="#37352f">Route Tables</text>
+        <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#37352f"/></marker></defs>
+      </svg>
+      <div class="cap">Slide: VPC &amp; Subnets Primer</div>
+    </div>
+
+    <h3>Public vs private subnets</h3>
+    <table>
+      <thead><tr><th>Type</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Public subnet</strong></td><td>A subnet that <em>is</em> accessible from the internet.</td></tr>
+        <tr><td><strong>Private subnet</strong></td><td>A subnet that is <em>not</em> accessible from the internet.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout yellow">
+      <span class="ico">🗺️</span>
+      <p>What actually makes a subnet "public" or "private" is its <strong>Route Table</strong>. To define access to the internet and between subnets, we use <strong>Route Tables</strong>. A subnet is public only if its route table sends <code>0.0.0.0/0</code> traffic to an <strong>Internet Gateway</strong>.</p>
+    </div>
+
+    <!-- ============ CIDR ============ -->
+    <h2 id="cidr">3 · CIDR &amp; the VPC diagram</h2>
+    <p>When you create a VPC you give it an IP address range using <strong>CIDR notation</strong>, e.g. <code>10.0.0.0/16</code>. The <code>/16</code> means the first 16 bits are fixed, leaving the rest for ~65,536 private addresses you then carve into subnets.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="470" fill="#ffffff"/>
+        <text x="30" y="40" font-size="26" font-weight="700" fill="#37352f">VPC Diagram</text>
+        <rect x="30" y="60" width="700" height="380" rx="6" fill="none" stroke="#232f3e" stroke-width="2"/>
+        <rect x="40" y="70" width="30" height="30" rx="4" fill="#232f3e"/>
+        <text x="55" y="91" font-size="12" fill="#fff" text-anchor="middle">aws</text>
+        <text x="80" y="91" font-size="15" font-weight="700" fill="#37352f">AWS Cloud</text>
+        <text x="380" y="125" font-size="16" fill="#37352f" text-anchor="middle">Region</text>
+        <rect x="55" y="135" width="650" height="285" rx="6" fill="none" stroke="#1565c0" stroke-width="2"/>
+        <rect x="63" y="143" width="26" height="26" rx="4" fill="#2e9e6b"/>
+        <text x="76" y="161" font-size="13" fill="#fff" text-anchor="middle">☁</text>
+        <text x="95" y="161" font-size="15" font-weight="700" fill="#1565c0">VPC</text>
+        <text x="380" y="265" font-size="17" font-weight="700" fill="#37352f" text-anchor="middle">VPC CIDR Range:</text>
+        <text x="380" y="290" font-size="17" font-weight="700" fill="#37352f" text-anchor="middle">10.0.0.0/16</text>
+        <rect x="80" y="150" width="220" height="255" rx="4" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="190" y="185" font-size="14" fill="#37352f" text-anchor="middle">Availability Zone 1</text>
+        <rect x="100" y="200" width="180" height="85" rx="6" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.3"/>
+        <text x="120" y="220" font-size="13" font-weight="600" fill="#2e7d32">🔒 Public subnet</text>
+        <rect x="100" y="300" width="180" height="90" rx="6" fill="#e7f3f8" stroke="#1565c0" stroke-width="1.3"/>
+        <text x="120" y="320" font-size="13" font-weight="600" fill="#1565c0">🔒 Private subnet</text>
+        <rect x="460" y="150" width="220" height="255" rx="4" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="570" y="185" font-size="14" fill="#37352f" text-anchor="middle">Availability Zone 2</text>
+        <rect x="480" y="200" width="180" height="85" rx="6" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.3"/>
+        <text x="500" y="220" font-size="13" font-weight="600" fill="#2e7d32">🔒 Public subnet</text>
+        <rect x="480" y="300" width="180" height="90" rx="6" fill="#e7f3f8" stroke="#1565c0" stroke-width="1.3"/>
+        <text x="500" y="320" font-size="13" font-weight="600" fill="#1565c0">🔒 Private subnet</text>
+      </svg>
+      <div class="cap">Slide: VPC Diagram — CIDR across two AZs</div>
+    </div>
+
+    <p>A typical, resilient layout places a <strong>public subnet</strong> and a <strong>private subnet</strong> in <em>each</em> of two (or more) Availability Zones — so the architecture survives the loss of a whole AZ.</p>
+    <div class="callout blue">
+      <span class="ico">🔢</span>
+      <p>VPC CIDR blocks must come from the private IP ranges (<code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code>). Subnet CIDRs are subdivisions of the VPC CIDR and <strong>cannot overlap</strong> each other. AWS also reserves <strong>5 IP addresses</strong> in every subnet (first four + last one), so a <code>/24</code> gives you 251 usable addresses, not 256.</p>
+    </div>
+
+    <!-- ============ IGW / NAT ============ -->
+    <h2 id="igw">4 · Internet Gateway &amp; NAT Gateways</h2>
+    <h3>Internet Gateway (IGW)</h3>
+    <p>An <strong>Internet Gateway</strong> helps the instances in your VPC connect with the internet. It attaches to the VPC, and <strong>public subnets have a route to the internet gateway</strong> (<code>0.0.0.0/0 → igw-…</code>). Without that route, a subnet is private.</p>
+
+    <h3>NAT Gateways &amp; NAT Instances</h3>
+    <p><strong>NAT Gateways (AWS-managed)</strong> and <strong>NAT Instances (self-managed)</strong> let instances in your <strong>private subnets</strong> reach the internet (for software updates, API calls, etc.) <em>while remaining private</em> — outside hosts still cannot initiate connections back to them.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="470" fill="#ffffff"/>
+        <text x="30" y="40" font-size="25" font-weight="700" fill="#37352f">Internet Gateway &amp; NAT Gateways</text>
+        <text x="600" y="70" font-size="16" font-weight="700" fill="#37352f">www</text>
+        <line x1="610" y1="78" x2="610" y2="105" stroke="#37352f" stroke-width="2"/>
+        <circle cx="610" cy="130" r="24" fill="none" stroke="#7c3aed" stroke-width="3"/>
+        <text x="610" y="137" font-size="18" text-anchor="middle">⛩</text>
+        <text x="645" y="135" font-size="15" font-weight="700" fill="#37352f">IGW</text>
+        <rect x="360" y="155" width="370" height="285" rx="6" fill="none" stroke="#232f3e" stroke-width="2"/>
+        <rect x="385" y="170" width="325" height="255" rx="14" fill="none" stroke="#ff9900" stroke-width="2.5" stroke-dasharray="8 6"/>
+        <text x="547" y="415" font-size="14" font-weight="700" fill="#37352f" text-anchor="middle">AZ A</text>
+        <rect x="410" y="190" width="275" height="110" rx="8" fill="#ffffff" stroke="#999" stroke-width="1.3"/>
+        <text x="455" y="290" font-size="13" font-weight="600" fill="#37352f">Public Subnet</text>
+        <rect x="430" y="210" width="44" height="44" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="452" y="240" font-size="20" text-anchor="middle">🖥</text>
+        <circle cx="600" cy="232" r="22" fill="none" stroke="#7c3aed" stroke-width="3"/>
+        <text x="600" y="239" font-size="16" text-anchor="middle">⇄</text>
+        <text x="630" y="237" font-size="14" font-weight="700" fill="#37352f">NAT</text>
+        <rect x="410" y="320" width="275" height="90" rx="8" fill="#ffffff" stroke="#999" stroke-width="1.3"/>
+        <text x="455" y="400" font-size="13" font-weight="600" fill="#37352f">Private Subnet</text>
+        <rect x="430" y="335" width="44" height="44" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="452" y="365" font-size="20" text-anchor="middle">🖥</text>
+        <path d="M452,335 L452,300 L600,300 L600,254" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#b)"/>
+        <path d="M600,210 L600,155 L610,155 L610,154" fill="none" stroke="#1565c0" stroke-width="2" marker-end="url(#b)"/>
+        <path d="M452,210 L452,150 L586,150 L586,150" fill="none" stroke="#444" stroke-width="2" marker-end="url(#b)"/>
+        <text x="30" y="100" font-size="14.5" fill="#37352f"><tspan font-weight="700">Internet Gateways</tspan> help your VPC</text>
+        <text x="30" y="122" font-size="14.5" fill="#37352f">instances connect with the internet</text>
+        <text x="30" y="158" font-size="14.5" fill="#37352f">Public Subnets have a route to</text>
+        <text x="30" y="180" font-size="14.5" fill="#37352f">the internet gateway</text>
+        <text x="30" y="220" font-size="14.5" fill="#37352f"><tspan font-weight="700">NAT Gateways</tspan> (AWS-managed) &amp;</text>
+        <text x="30" y="242" font-size="14.5" fill="#37352f"><tspan font-weight="700">NAT Instances</tspan> (self-managed)</text>
+        <text x="30" y="264" font-size="14.5" fill="#37352f">let instances in your <tspan font-weight="700">Private</tspan></text>
+        <text x="30" y="286" font-size="14.5" fill="#37352f"><tspan font-weight="700">Subnets</tspan> access the internet</text>
+        <text x="30" y="308" font-size="14.5" fill="#37352f">while remaining private</text>
+        <defs><marker id="b" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1565c0"/></marker></defs>
+      </svg>
+      <div class="cap">Slide: Internet Gateway &amp; NAT Gateways</div>
+    </div>
+
+    <div class="callout yellow">
+      <span class="ico">⚠️</span>
+      <p>The <strong>NAT Gateway itself lives in a public subnet</strong> and needs the IGW to function. The flow is: private instance → NAT (public subnet) → IGW → internet. Traffic is <strong>outbound-initiated only</strong>; the internet cannot start a connection into the private instance.</p>
+    </div>
+    <table>
+      <thead><tr><th>Feature</th><th>NAT Gateway</th><th>NAT Instance</th></tr></thead>
+      <tbody>
+        <tr><td>Managed by</td><td class="yes">AWS (fully managed)</td><td>You (an EC2 instance)</td></tr>
+        <tr><td>Availability / scaling</td><td>Highly available within an AZ, auto-scales bandwidth</td><td>You must manage HA &amp; size yourself</td></tr>
+        <tr><td>Admin overhead</td><td>None</td><td>Patching, sizing, failover</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ============ FIREWALL ============ -->
+    <h2 id="firewall">5 · NACL &amp; Security Groups</h2>
+    <p>These are the two firewalls of a VPC. They look similar but operate at different layers.</p>
+
+    <h3>NACL (Network ACL)</h3>
+    <ul>
+      <li>A firewall which controls traffic <strong>from and to a subnet</strong>.</li>
+      <li>Can have <strong>ALLOW <em>and</em> DENY</strong> rules.</li>
+      <li>Attached at the <strong>subnet</strong> level.</li>
+      <li>Rules only include <strong>IP addresses</strong> (no referencing other security groups).</li>
+      <li><strong>Stateless</strong> — return traffic must be explicitly allowed by a rule.</li>
+    </ul>
+
+    <h3>Security Groups (SG)</h3>
+    <ul>
+      <li>A firewall that controls traffic <strong>to and from an ENI / an EC2 instance</strong>.</li>
+      <li>Can have <strong>only ALLOW</strong> rules (no deny rules).</li>
+      <li>Rules include <strong>IP addresses</strong> and <strong>other security groups</strong>.</li>
+      <li><strong>Stateful</strong> — return traffic is automatically allowed.</li>
+    </ul>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 460" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="460" fill="#ffffff"/>
+        <text x="30" y="40" font-size="25" font-weight="700" fill="#37352f">Network ACL &amp; Security Groups</text>
+        <rect x="430" y="70" width="300" height="360" rx="6" fill="none" stroke="#1565c0" stroke-width="2"/>
+        <rect x="438" y="78" width="24" height="24" rx="4" fill="#2e9e6b"/>
+        <text x="468" y="95" font-size="14" font-weight="700" fill="#1565c0">VPC</text>
+        <rect x="450" y="110" width="260" height="300" rx="6" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.3"/>
+        <text x="465" y="132" font-size="13" font-weight="600" fill="#2e7d32">🔒 Public subnet</text>
+        <line x1="560" y1="60" x2="560" y2="190" stroke="#444" stroke-width="2" marker-end="url(#c)"/>
+        <line x1="600" y1="190" x2="600" y2="60" stroke="#444" stroke-width="2" marker-end="url(#c)"/>
+        <circle cx="580" cy="215" r="30" fill="none" stroke="#7c3aed" stroke-width="3"/>
+        <text x="580" y="223" font-size="20" text-anchor="middle">🛡</text>
+        <text x="490" y="220" font-size="15" font-weight="700" fill="#37352f">NACL</text>
+        <line x1="565" y1="245" x2="565" y2="300" stroke="#444" stroke-width="2" marker-end="url(#c)"/>
+        <line x1="600" y1="300" x2="600" y2="245" stroke="#444" stroke-width="2" marker-end="url(#c)"/>
+        <rect x="500" y="300" width="170" height="95" rx="6" fill="none" stroke="#c0392b" stroke-width="2"/>
+        <rect x="555" y="315" width="55" height="55" rx="6" fill="none" stroke="#ff9900" stroke-width="3"/>
+        <text x="582" y="350" font-size="24" text-anchor="middle">🖥</text>
+        <text x="585" y="388" font-size="12" font-weight="600" fill="#c0392b" text-anchor="middle">Security group</text>
+        <text x="30" y="90" font-size="15" font-weight="700" fill="#37352f">NACL (Network ACL)</text>
+        <text x="40" y="114" font-size="13.5" fill="#37352f">• Firewall controlling traffic to/from subnet</text>
+        <text x="40" y="136" font-size="13.5" fill="#37352f">• Can have ALLOW and DENY rules</text>
+        <text x="40" y="158" font-size="13.5" fill="#37352f">• Attached at the <tspan font-weight="700">Subnet</tspan> level</text>
+        <text x="40" y="180" font-size="13.5" fill="#37352f">• Rules only include IP addresses</text>
+        <text x="40" y="202" font-size="13.5" fill="#37352f">• Stateless</text>
+        <text x="30" y="252" font-size="15" font-weight="700" fill="#37352f">Security Groups</text>
+        <text x="40" y="276" font-size="13.5" fill="#37352f">• Firewall controlling traffic to/from</text>
+        <text x="52" y="296" font-size="13.5" fill="#37352f"><tspan font-weight="700">an ENI / an EC2 Instance</tspan></text>
+        <text x="40" y="318" font-size="13.5" fill="#37352f">• Can have only ALLOW rules</text>
+        <text x="40" y="340" font-size="13.5" fill="#37352f">• Rules include IP addresses and</text>
+        <text x="52" y="360" font-size="13.5" fill="#37352f">other security groups</text>
+        <text x="40" y="382" font-size="13.5" fill="#37352f">• Stateful</text>
+        <defs><marker id="c" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#444"/></marker></defs>
+      </svg>
+      <div class="cap">Slide: NACL (subnet) wraps the Security Group (instance)</div>
+    </div>
+
+    <div class="callout blue">
+      <span class="ico">🧅</span>
+      <p>Think of them as layers: a packet hits the <strong>NACL first (subnet door)</strong>, then the <strong>Security Group (instance door)</strong>. A connection succeeds only if <em>both</em> permit it.</p>
+    </div>
+
+    <h3>Security Group chaining (a heavily-tested concept)</h3>
+    <p>Because a Security Group rule can reference <em>another Security Group</em> as its source, you can "chain" tiers so each layer only accepts traffic from the layer in front of it — no IP addresses required:</p>
+    <div class="flow">
+      <span class="node">Internet (0.0.0.0/0)</span><span class="arrow">↓ allowed into</span>
+      <span class="node purple">ALB-SG (port 80/443 from internet)</span><span class="arrow">↓ source = ALB-SG</span>
+      <span class="node primary">WEB-SG (port 80 from ALB-SG only)</span><span class="arrow">↓ source = WEB-SG</span>
+      <span class="node replica">DB-SG (port 3306 from WEB-SG only)</span>
+    </div>
+    <div class="callout green">
+      <span class="ico">🔗</span>
+      <p>This is the answer to the classic exam question <em>"how do you let ONLY the ALB reach the EC2 instances on port 80?"</em> → on the EC2/web Security Group, set the inbound source to the <strong>ALB's Security Group</strong>, not a CIDR. It keeps working even as the ALB scales and its IPs change.</p>
+    </div>
+    <div class="callout red">
+      <span class="ico">🚫</span>
+      <p><strong>Why not the obvious-looking answers?</strong> <code>80 from 0.0.0.0/0</code> lets the internet bypass the ALB and hit EC2 directly. <code>80 from 192.168.0.0/18</code> (the VPC CIDR) lets <em>everything</em> in the VPC — bastion, Lambda, other instances — reach the web servers. The requirement is "<strong>only the ALB</strong>," so reference the ALB-SG.</p>
+    </div>
+
+    <!-- ============ COMPARE ============ -->
+    <h2 id="compare">6 · NACL vs Security Groups (the table to memorize)</h2>
+    <table>
+      <thead><tr><th>Security Group</th><th>Network ACL</th></tr></thead>
+      <tbody>
+        <tr><td>Operates at the <strong>instance</strong> level</td><td>Operates at the <strong>subnet</strong> level</td></tr>
+        <tr><td>Supports <strong>allow rules only</strong></td><td>Supports <strong>allow rules and deny rules</strong></td></tr>
+        <tr><td><strong>Stateful</strong>: return traffic is automatically allowed, regardless of any rules</td><td><strong>Stateless</strong>: return traffic must be explicitly allowed by rules</td></tr>
+        <tr><td>We <strong>evaluate all rules</strong> before deciding whether to allow traffic</td><td>We <strong>process rules in number order</strong> when deciding whether to allow traffic</td></tr>
+        <tr><td>Applies to an instance <strong>only if</strong> someone specifies the SG at launch, or associates it later</td><td><strong>Automatically applies</strong> to all instances in the subnets it's associated with</td></tr>
+      </tbody>
+    </table>
+    <p class="subtitle">Reference: <a href="https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Security.html#VPC_Security_Comparison">AWS VPC security comparison docs</a></p>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p><strong>Two-line memory hook:</strong> Security Group = <em>instance-level, stateful, allow-only, can reference other SGs</em>. NACL = <em>subnet-level, stateless, allow + deny, IP-only, evaluated in rule-number order</em>.</p>
+    </div>
+
+    <!-- ============ FLOW LOGS ============ -->
+    <h2 id="flow">7 · VPC Flow Logs</h2>
+    <p>VPC Flow Logs capture information about the <strong>IP traffic going into and out of your interfaces</strong>. They come at three levels:</p>
+    <ul>
+      <li><strong>VPC</strong> Flow Logs</li>
+      <li><strong>Subnet</strong> Flow Logs</li>
+      <li><strong>Elastic Network Interface (ENI)</strong> Flow Logs</li>
+    </ul>
+    <p>They help you <strong>monitor &amp; troubleshoot connectivity issues</strong>, for example: subnets → internet, subnets → subnets, and internet → subnets.</p>
+    <div class="callout blue">
+      <span class="ico">📡</span>
+      <p>Flow Logs also capture network information from <strong>AWS-managed interfaces</strong>: Elastic Load Balancers, ElastiCache, RDS, Aurora, etc. The log data can be sent to <strong>Amazon S3</strong>, <strong>CloudWatch Logs</strong>, and <strong>Kinesis Data Firehose</strong>.</p>
+    </div>
+    <div class="callout yellow">
+      <span class="ico">🔍</span>
+      <p>A flow log record shows the action as <code>ACCEPT</code> or <code>REJECT</code>. If you see <code>REJECT</code>, a firewall blocked it — check your <strong>NACL</strong> and <strong>Security Group</strong> rules. Flow Logs are the standard first stop for "why can't these two things talk to each other?"</p>
+    </div>
+
+    <!-- ============ PEERING ============ -->
+    <h2 id="peering">8 · VPC Peering</h2>
+    <p>VPC Peering connects two VPCs <strong>privately using AWS's network</strong>, making them behave as if they were in the same network.</p>
+    <ul>
+      <li>The two VPCs <strong>must not have overlapping CIDR</strong> (overlapping IP ranges can't be routed).</li>
+      <li>VPC Peering is <strong>NOT transitive</strong> — a connection must be established for <em>each</em> pair of VPCs that need to communicate.</li>
+    </ul>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="470" fill="#ffffff"/>
+        <text x="30" y="40" font-size="25" font-weight="700" fill="#37352f">VPC Peering</text>
+        <text x="30" y="90" font-size="14" fill="#37352f">• Connect two VPC, privately using AWS' network</text>
+        <text x="30" y="116" font-size="14" fill="#37352f">• Make them behave as if in the same network</text>
+        <text x="30" y="142" font-size="14" fill="#37352f">• Must not have overlapping CIDR (IP range)</text>
+        <text x="30" y="168" font-size="14" fill="#37352f">• Peering is <tspan font-weight="700">not transitive</tspan> — must be set up</text>
+        <text x="42" y="188" font-size="14" fill="#37352f">for each pair that needs to communicate</text>
+        <rect x="200" y="240" width="70" height="70" rx="10" fill="#7c3aed"/>
+        <text x="235" y="282" font-size="26" text-anchor="middle" fill="#fff">☁</text>
+        <text x="235" y="232" font-size="15" font-weight="700" fill="#37352f" text-anchor="middle">VPC A</text>
+        <rect x="540" y="240" width="70" height="70" rx="10" fill="#7c3aed"/>
+        <text x="575" y="282" font-size="26" text-anchor="middle" fill="#fff">☁</text>
+        <text x="575" y="232" font-size="15" font-weight="700" fill="#37352f" text-anchor="middle">VPC B</text>
+        <rect x="370" y="380" width="70" height="70" rx="10" fill="#7c3aed"/>
+        <text x="405" y="422" font-size="26" text-anchor="middle" fill="#fff">☁</text>
+        <text x="405" y="372" font-size="15" font-weight="700" fill="#37352f" text-anchor="middle">VPC C</text>
+        <line x1="270" y1="275" x2="540" y2="275" stroke="#666" stroke-width="2.5" marker-start="url(#d)" marker-end="url(#d)"/>
+        <line x1="240" y1="310" x2="380" y2="380" stroke="#666" stroke-width="2.5" marker-start="url(#d)" marker-end="url(#d)"/>
+        <line x1="570" y1="310" x2="430" y2="380" stroke="#666" stroke-width="2.5" marker-start="url(#d)" marker-end="url(#d)"/>
+        <circle cx="405" cy="275" r="18" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="405" y="281" font-size="14" text-anchor="middle">⇄</text>
+        <text x="405" y="245" font-size="12" font-weight="700" fill="#37352f" text-anchor="middle">A ↔ B</text>
+        <circle cx="295" cy="345" r="18" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="295" y="351" font-size="14" text-anchor="middle">⇄</text>
+        <text x="250" y="372" font-size="12" font-weight="700" fill="#37352f" text-anchor="middle">A ↔ C</text>
+        <circle cx="515" cy="345" r="18" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+        <text x="515" y="351" font-size="14" text-anchor="middle">⇄</text>
+        <text x="560" y="372" font-size="12" font-weight="700" fill="#37352f" text-anchor="middle">B ↔ C</text>
+        <defs><marker id="d" markerWidth="9" markerHeight="9" refX="3" refY="3" orient="auto"><path d="M6,0 L0,3 L6,6 Z" fill="#666"/></marker></defs>
+      </svg>
+      <div class="cap">Slide: VPC Peering is non-transitive (mesh of connections)</div>
+    </div>
+
+    <div class="callout red">
+      <span class="ico">🚫</span>
+      <p><strong>Non-transitive means:</strong> if A↔B and B↔C are peered, A still <em>cannot</em> reach C through B. You must create a direct A↔C peering. For 3 VPCs fully meshed you need 3 connections; the count grows fast, which is why large setups use a <strong>Transit Gateway</strong> instead.</p>
+    </div>
+    <div class="callout yellow">
+      <span class="ico">🛣️</span>
+      <p>Peering alone isn't enough — you must also <strong>update the route tables</strong> in each VPC's subnets so traffic for the peer's CIDR is routed across the peering connection. Peering works cross-Region and cross-account too.</p>
+    </div>
+
+    <!-- ============ ENDPOINTS ============ -->
+    <h2 id="endpoints">9 · VPC Endpoints</h2>
+    <p>Endpoints allow you to connect to AWS services <strong>using a private network</strong> instead of the public www network. This gives <strong>enhanced security and lower latency</strong> to access AWS services.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 470" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="470" fill="#ffffff"/>
+        <text x="30" y="40" font-size="25" font-weight="700" fill="#37352f">VPC Endpoints</text>
+        <text x="30" y="86" font-size="13.5" fill="#37352f">• Connect to AWS Services using a <tspan font-weight="700">private network</tspan></text>
+        <text x="30" y="108" font-size="13.5" fill="#37352f">  instead of the public www network</text>
+        <text x="30" y="130" font-size="13.5" fill="#37352f">• Enhanced security and lower latency</text>
+        <text x="30" y="158" font-size="13.5" fill="#37352f">• <tspan font-weight="700">Endpoint Gateway</tspan>: S3 &amp; DynamoDB</text>
+        <text x="30" y="180" font-size="13.5" fill="#37352f">• <tspan font-weight="700">Endpoint Interface</tspan>: most services</text>
+        <text x="30" y="208" font-size="13.5" fill="#37352f">• Only used within your VPC</text>
+        <rect x="410" y="60" width="320" height="230" rx="6" fill="none" stroke="#1565c0" stroke-width="2"/>
+        <text x="455" y="82" font-size="14" font-weight="700" fill="#1565c0">VPC</text>
+        <rect x="430" y="95" width="285" height="180" rx="6" fill="#e7f3f8" stroke="#1565c0" stroke-width="1.2"/>
+        <text x="445" y="115" font-size="12.5" font-weight="600" fill="#1565c0">🔒 Private subnet</text>
+        <rect x="450" y="130" width="55" height="55" rx="6" fill="none" stroke="#ff9900" stroke-width="3"/>
+        <text x="477" y="165" font-size="22" text-anchor="middle">🖥</text>
+        <circle cx="640" cy="155" r="26" fill="none" stroke="#7c3aed" stroke-width="3"/>
+        <text x="640" y="162" font-size="18" text-anchor="middle">🔌</text>
+        <text x="640" y="205" font-size="12" font-weight="700" fill="#37352f" text-anchor="middle">VPC Endpoint</text>
+        <text x="640" y="221" font-size="12" font-weight="700" fill="#37352f" text-anchor="middle">Interface (ENI)</text>
+        <circle cx="540" cy="225" r="24" fill="none" stroke="#7c3aed" stroke-width="3"/>
+        <text x="540" y="232" font-size="16" text-anchor="middle">🛡</text>
+        <text x="540" y="262" font-size="11.5" font-weight="700" fill="#37352f" text-anchor="middle">VPC Endpoint Gateway</text>
+        <line x1="505" y1="155" x2="612" y2="155" stroke="#444" stroke-width="2" marker-end="url(#e)"/>
+        <line x1="490" y1="185" x2="525" y2="210" stroke="#444" stroke-width="2" marker-end="url(#e)"/>
+        <rect x="430" y="350" width="70" height="60" rx="8" fill="#1b9e3e"/>
+        <text x="465" y="388" font-size="22" text-anchor="middle" fill="#fff">🪣</text>
+        <text x="465" y="428" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">S3</text>
+        <rect x="545" y="350" width="70" height="60" rx="8" fill="#2e4bd6"/>
+        <text x="580" y="388" font-size="22" text-anchor="middle" fill="#fff">⚡</text>
+        <text x="580" y="428" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">DynamoDB</text>
+        <rect x="660" y="350" width="70" height="60" rx="8" fill="#c0277a"/>
+        <text x="695" y="388" font-size="22" text-anchor="middle" fill="#fff">📊</text>
+        <text x="695" y="428" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">CloudWatch</text>
+        <path d="M530,249 L465,350" fill="none" stroke="#444" stroke-width="2" marker-end="url(#e)"/>
+        <path d="M548,249 L580,350" fill="none" stroke="#444" stroke-width="2" marker-end="url(#e)"/>
+        <path d="M648,181 L695,350" fill="none" stroke="#444" stroke-width="2" marker-end="url(#e)"/>
+        <defs><marker id="e" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#444"/></marker></defs>
+      </svg>
+      <div class="cap">Slide: VPC Endpoints — Gateway (S3/DynamoDB) vs Interface (ENI)</div>
+    </div>
+
+    <table>
+      <thead><tr><th>Endpoint type</th><th>What it's for</th></tr></thead>
+      <tbody>
+        <tr><td><strong>VPC Endpoint Gateway</strong></td><td><strong>S3 &amp; DynamoDB</strong> only. Added as a route-table target; no ENI, no extra cost.</td></tr>
+        <tr><td><strong>VPC Endpoint Interface (ENI)</strong></td><td><strong>Most services</strong> (including S3 &amp; DynamoDB). Provisions a private ENI in your subnet; hourly + data charges apply.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout green">
+      <span class="ico">🔒</span>
+      <p>VPC Endpoints are <strong>only used within your VPC</strong>. They let a private instance reach AWS services <em>without</em> an Internet Gateway or NAT Gateway — traffic never traverses the public internet, which is both cheaper and more secure.</p>
+    </div>
+    <div class="callout blue">
+      <span class="ico">🧠</span>
+      <p>Exam shortcut: if the question says <strong>S3 or DynamoDB</strong> and "no internet/NAT," the answer is the <strong>Gateway Endpoint</strong>. For any <em>other</em> AWS service privately, it's the <strong>Interface Endpoint (powered by PrivateLink)</strong>.</p>
+    </div>
+
+    <!-- ============ HYBRID ============ -->
+    <h2 id="hybrid">10 · Site-to-Site VPN &amp; Direct Connect</h2>
+    <p>Both connect your <strong>on-premises data center</strong> to your AWS VPC, but very differently.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 760 420" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="760" height="420" fill="#ffffff"/>
+        <text x="30" y="40" font-size="25" font-weight="700" fill="#37352f">Site to Site VPN &amp; Direct Connect</text>
+        <rect x="60" y="170" width="80" height="80" rx="6" fill="none" stroke="#232f3e" stroke-width="2.5"/>
+        <text x="100" y="222" font-size="34" text-anchor="middle">🏢</text>
+        <text x="100" y="275" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">On-premises DC</text>
+        <rect x="630" y="170" width="80" height="80" rx="10" fill="#7c3aed"/>
+        <text x="670" y="222" font-size="30" text-anchor="middle" fill="#fff">☁</text>
+        <text x="670" y="275" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">VPC</text>
+        <rect x="350" y="70" width="80" height="70" rx="8" fill="#7c3aed"/>
+        <text x="390" y="115" font-size="26" text-anchor="middle" fill="#fff">🔒</text>
+        <text x="390" y="160" font-size="12.5" font-weight="700" fill="#37352f" text-anchor="middle">Site-to-Site VPN</text>
+        <text x="390" y="176" font-size="11.5" fill="#37352f" text-anchor="middle">(encrypted)</text>
+        <path d="M140,190 L140,105 L350,105" fill="none" stroke="#2196f3" stroke-width="2.5" marker-end="url(#f1)"/>
+        <path d="M430,105 L670,105 L670,170" fill="none" stroke="#2196f3" stroke-width="2.5" marker-end="url(#f1)"/>
+        <text x="245" y="95" font-size="12" fill="#2196f3" text-anchor="middle">Public www</text>
+        <text x="555" y="95" font-size="12" fill="#2196f3" text-anchor="middle">Public www</text>
+        <rect x="350" y="290" width="80" height="70" rx="8" fill="#7c3aed"/>
+        <text x="390" y="335" font-size="26" text-anchor="middle" fill="#fff">☁</text>
+        <text x="390" y="378" font-size="12.5" font-weight="700" fill="#37352f" text-anchor="middle">Direct Connect</text>
+        <path d="M140,250 L140,325 L350,325" fill="none" stroke="#ff9900" stroke-width="2.5" marker-end="url(#f2)"/>
+        <path d="M430,325 L670,325 L670,250" fill="none" stroke="#ff9900" stroke-width="2.5" marker-end="url(#f2)"/>
+        <text x="245" y="345" font-size="12" fill="#d99e00" text-anchor="middle">Private</text>
+        <text x="555" y="345" font-size="12" fill="#d99e00" text-anchor="middle">Private</text>
+        <defs>
+          <marker id="f1" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2196f3"/></marker>
+          <marker id="f2" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ff9900"/></marker>
+        </defs>
+      </svg>
+      <div class="cap">Slide: VPN over public internet · Direct Connect over private link</div>
+    </div>
+
+    <table>
+      <thead><tr><th></th><th>Site-to-Site VPN</th><th>Direct Connect (DX)</th></tr></thead>
+      <tbody>
+        <tr><td>What it is</td><td>Connect an on-premises VPN to AWS</td><td>A <strong>physical</strong> connection between on-premises and AWS</td></tr>
+        <tr><td>Path</td><td>Over the <strong>public internet</strong></td><td>Over a <strong>private network</strong></td></tr>
+        <tr><td>Encryption</td><td><strong>Automatically encrypted</strong></td><td>Private &amp; secure (not encrypted by default)</td></tr>
+        <tr><td>Speed / quality</td><td>Subject to internet variability</td><td>Private, secure and <strong>fast</strong></td></tr>
+        <tr><td>Setup time</td><td>Fast (minutes/hours)</td><td><strong>Takes at least a month</strong> to establish</td></tr>
+      </tbody>
+    </table>
+    <div class="callout yellow">
+      <span class="ico">⏱️</span>
+      <p>If a scenario needs hybrid connectivity <strong>quickly</strong> → Site-to-Site VPN. If it needs <strong>consistent high throughput / low latency / private bandwidth</strong> (and can wait ~a month) → Direct Connect. Many enterprises run a VPN as a cheap backup to a DX link.</p>
+    </div>
+    <div class="callout blue">
+      <span class="ico">🔧</span>
+      <p>On the AWS side, a Site-to-Site VPN terminates at a <strong>Virtual Private Gateway (VGW)</strong> attached to your VPC, with a <strong>Customer Gateway</strong> representing your on-premises device; an encrypted tunnel runs between them. Typical customers for <strong>Direct Connect</strong> are banks, telecoms, large enterprises, and government — anyone needing dedicated, reliable bandwidth.</p>
+    </div>
+
+    <h3>Aside from the chat — why RDS doesn't run MongoDB</h3>
+    <p>A related question that came up: <strong>RDS does not support MongoDB</strong> because RDS is built for <em>relational</em> engines (MySQL, PostgreSQL, MariaDB, Oracle, SQL Server) that assume tables, rows, SQL joins and ACID transactions. MongoDB is a <em>NoSQL document</em> database (collections, JSON/BSON documents, flexible schema, sharding, replica sets) — a fundamentally different architecture.</p>
+    <div class="callout purple">
+      <span class="ico">🍃</span>
+      <p>AWS's managed MongoDB-compatible service is <strong>Amazon DocumentDB</strong>, not RDS. You <em>could</em> self-manage MongoDB on EC2, but then backups, patching, scaling and failover are all on you.</p>
+    </div>
+
+    <!-- ============ ARCHITECTURES ============ -->
+    <h2 id="arch">11 · Putting it together — real-world architectures</h2>
+
+    <h3>Typical 3-tier solution architecture</h3>
+    <p>This pattern shows where each VPC concept lands in a production app:</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 800 460" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+        <rect width="800" height="460" fill="#ffffff"/>
+        <text x="30" y="36" font-size="24" font-weight="700" fill="#37352f">Typical 3-tier solution architecture</text>
+        <text x="55" y="240" font-size="40" text-anchor="middle">🧑</text>
+        <text x="55" y="275" font-size="12" fill="#37352f" text-anchor="middle">User</text>
+        <rect x="150" y="70" width="64" height="64" rx="10" fill="#7c3aed"/>
+        <text x="182" y="112" font-size="22" text-anchor="middle" fill="#fff">53</text>
+        <text x="225" y="95" font-size="13" font-weight="700" fill="#37352f">Route 53</text>
+        <path d="M85,215 C120,150 130,120 150,108" fill="none" stroke="#444" stroke-width="2" marker-end="url(#g)"/>
+        <rect x="150" y="175" width="130" height="150" rx="6" fill="none" stroke="#888" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="215" y="195" font-size="12" fill="#666" text-anchor="middle">Multi AZ</text>
+        <rect x="185" y="215" width="60" height="60" rx="8" fill="#ff9900"/>
+        <text x="215" y="252" font-size="22" text-anchor="middle" fill="#fff">⚖</text>
+        <text x="215" y="300" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">ELB</text>
+        <path d="M85,235 L185,245" fill="none" stroke="#444" stroke-width="2" marker-end="url(#g)"/>
+        <rect x="330" y="160" width="180" height="240" rx="6" fill="none" stroke="#ff9900" stroke-width="2" stroke-dasharray="7 5"/>
+        <text x="420" y="178" font-size="12" fill="#d99e00" text-anchor="middle">Auto Scaling group</text>
+        <rect x="365" y="190" width="55" height="48" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="392" y="222" font-size="16" font-weight="700" fill="#ff9900" text-anchor="middle">M5</text>
+        <rect x="365" y="262" width="55" height="48" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="392" y="294" font-size="16" font-weight="700" fill="#ff9900" text-anchor="middle">M5</text>
+        <rect x="365" y="334" width="55" height="48" rx="6" fill="none" stroke="#ff9900" stroke-width="2.5"/>
+        <text x="392" y="366" font-size="16" font-weight="700" fill="#ff9900" text-anchor="middle">M5</text>
+        <path d="M245,245 L365,214" fill="none" stroke="#444" stroke-width="1.6" marker-end="url(#g)"/>
+        <path d="M245,250 L365,286" fill="none" stroke="#444" stroke-width="1.6" marker-end="url(#g)"/>
+        <path d="M245,255 L365,358" fill="none" stroke="#444" stroke-width="1.6" marker-end="url(#g)"/>
+        <rect x="620" y="150" width="64" height="64" rx="8" fill="#2e4bd6"/>
+        <text x="652" y="192" font-size="22" text-anchor="middle" fill="#fff">🗄</text>
+        <text x="652" y="232" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">ElastiCache</text>
+        <text x="652" y="250" font-size="11" fill="#37352f" text-anchor="middle">session + cache</text>
+        <rect x="620" y="300" width="64" height="64" rx="8" fill="#2e4bd6"/>
+        <text x="652" y="342" font-size="22" text-anchor="middle" fill="#fff">🛢</text>
+        <text x="652" y="382" font-size="13" font-weight="700" fill="#37352f" text-anchor="middle">Amazon RDS</text>
+        <text x="652" y="400" font-size="11" fill="#37352f" text-anchor="middle">read / write</text>
+        <path d="M420,214 L620,185" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#g)"/>
+        <path d="M420,358 L620,335" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#g)"/>
+        <path d="M420,286 L620,200" fill="none" stroke="#444" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#g)"/>
+        <path d="M420,290 L620,330" fill="none" stroke="#444" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#g)"/>
+        <text x="215" y="430" font-size="12.5" font-weight="700" fill="#37352f" text-anchor="middle">PUBLIC SUBNETS</text>
+        <text x="420" y="430" font-size="12.5" font-weight="700" fill="#37352f" text-anchor="middle">PRIVATE SUBNETS (3)</text>
+        <text x="652" y="430" font-size="12.5" font-weight="700" fill="#37352f" text-anchor="middle">DATA SUBNET</text>
+        <defs><marker id="g" markerWidth="9" markerHeight="9" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#444"/></marker></defs>
+      </svg>
+      <div class="cap">Slide: Typical 3-tier architecture (public / private / data subnets)</div>
+    </div>
+
+    <ul>
+      <li><strong>Public subnets</strong> hold the internet-facing <strong>ELB</strong>.</li>
+      <li><strong>Private subnets</strong> hold the <strong>EC2 Auto Scaling group</strong> (web/app tier) across multiple AZs.</li>
+      <li><strong>Data subnets</strong> hold <strong>ElastiCache</strong> (store/retrieve session + cached data) and <strong>RDS</strong> (read/write data).</li>
+    </ul>
+
+    <h3>LAMP stack on EC2</h3>
+    <table>
+      <thead><tr><th>Letter</th><th>Component</th><th>Where it runs</th></tr></thead>
+      <tbody>
+        <tr><td><strong>L</strong>inux</td><td>OS for EC2 instances</td><td>EC2</td></tr>
+        <tr><td><strong>A</strong>pache</td><td>Web server</td><td>EC2 (Linux)</td></tr>
+        <tr><td><strong>M</strong>ySQL</td><td>Database</td><td>RDS</td></tr>
+        <tr><td><strong>P</strong>HP</td><td>Application logic</td><td>EC2</td></tr>
+      </tbody>
+    </table>
+    <p>You can add <strong>Redis / Memcached (ElastiCache)</strong> for a caching tier, and use an <strong>EBS</strong> drive (root) to store local application data &amp; software.</p>
+
+    <h3>WordPress on AWS</h3>
+    <p>A highly available WordPress uses Route 53 → ELB (Multi-AZ) → EC2 instances, each with an <strong>ENI</strong> mounting a shared <strong>EFS</strong> file system, so user-uploaded images are visible from every instance. The "more complicated" reference architecture layers in <strong>CloudFront</strong>, an <strong>S3 bucket for static assets</strong>, public/app/data subnets, NAT gateways, Memcached, and <strong>Aurora</strong> (master + read replica).</p>
+    <p class="subtitle">Reference: <a href="https://aws.amazon.com/blogs/architecture/wordpress-best-practices-on-aws/">WordPress best practices on AWS</a></p>
+
+    <!-- ============ RECAP ============ -->
+    <h2 id="recap">12 · Closing recap</h2>
+    <div class="callout gray">
+      <span class="ico">🧭</span>
+      <p><strong>One-liners for every concept:</strong> <strong>VPC</strong> = Virtual Private Cloud (regional). <strong>Subnets</strong> = tied to an AZ, network partition of the VPC. <strong>Internet Gateway</strong> = at the VPC level, provides internet access. <strong>NAT Gateway / Instances</strong> = give internet access to private subnets. <strong>NACL</strong> = stateless, subnet rules for inbound &amp; outbound, allow + deny. <strong>Security Groups</strong> = stateful, operate at the EC2 instance / ENI level, allow only. <strong>VPC Peering</strong> = connect two VPCs with non-overlapping IP ranges, non-transitive. <strong>VPC Endpoints</strong> = private access to AWS services within VPC. <strong>VPC Flow Logs</strong> = network traffic logs. <strong>Site-to-Site VPN</strong> = VPN over public internet between on-prem DC and AWS. <strong>Direct Connect</strong> = direct private connection to AWS.</p>
+    </div>
+
+    <!-- ============ SCENARIOS ============ -->
+    <h2 id="scenarios">13 · Scenario-based questions</h2>
+    <p>These are "what would you do?" design scenarios — the format AWS exams favor. Read the situation, decide, then expand the answer.</p>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 1 · Private instances need updates</span>
+      <p class="qtext">EC2 instances in a private subnet must download OS patches from the internet, but must never be reachable <em>from</em> the internet. What do you configure?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>Put a <strong>NAT Gateway in a public subnet</strong> and add a route in the private subnet's route table: <code>0.0.0.0/0 → nat-…</code>. The NAT (via the IGW) allows <strong>outbound-initiated</strong> traffic only, so patches download while inbound connections from the internet remain blocked. A bare Internet Gateway route would make the subnet public — wrong here.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 2 · Reaching S3 without internet</span>
+      <p class="qtext">A private EC2 instance must read/write to S3, but the security team forbids any Internet Gateway or NAT in that subnet. What's the cheapest correct solution?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>A <strong>VPC Gateway Endpoint for S3</strong>. It's added as a route-table target, keeps traffic on AWS's private network, has <strong>no hourly cost</strong>, and needs no IGW/NAT. (DynamoDB is the other Gateway-Endpoint service.) An Interface Endpoint would also work but costs more.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 3 · Three VPCs, partial connectivity</span>
+      <p class="qtext">VPC A is peered with B, and B is peered with C. Team A reports they can't reach resources in C. Why, and what's the fix?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>VPC Peering is <strong>not transitive</strong> — traffic can't hop A→B→C. Create a <strong>direct A↔C peering connection</strong> (and update both route tables). If many VPCs must interconnect, switch to a <strong>Transit Gateway</strong> to avoid a mesh of peerings.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 4 · Blocking a malicious IP for a whole subnet</span>
+      <p class="qtext">A single attacker IP is hitting every instance in a subnet. You want one rule that blocks it for the entire subnet. Security Group or NACL?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p><strong>NACL</strong> with a <strong>DENY</strong> rule for that IP. Security Groups can't deny (allow-only) and apply per-instance; a NACL applies at the subnet level and supports explicit deny, so one rule covers every instance at once.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 5 · Return traffic mysteriously dropped</span>
+      <p class="qtext">You allowed inbound port 443 on a subnet's NACL, but responses to your instances are being dropped. The Security Group is fine. What's wrong?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>NACLs are <strong>stateless</strong> — you must also allow the <strong>outbound ephemeral port range</strong> (<code>1024–65535</code>) for return traffic. Security Groups are stateful and handle return traffic automatically, which is why the SG looked fine. Add the outbound NACL rule.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 6 · Web tier should only accept traffic from the load balancer</span>
+      <p class="qtext">App-tier EC2 instances should accept traffic only from the ALB, whose IPs change as it scales. How do you write the rule without hard-coding IPs?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>In the app instances' <strong>Security Group</strong>, set the inbound source to the <strong>ALB's Security Group</strong> (SGs can reference other SGs). This survives IP changes automatically. NACLs can't do this — they only understand IP ranges.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 7 · Two connectivity options to on-premises</span>
+      <p class="qtext">A bank needs a hybrid link to AWS that is private, high-throughput, and consistent for large nightly data transfers. Latency-sensitive. Which option, and what's the catch?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p><strong>Direct Connect (DX)</strong> — a private, fast, consistent physical link, ideal for steady high-volume transfers. The catch: it <strong>takes at least a month</strong> to provision. A Site-to-Site VPN can be the interim/backup since it stands up in minutes (but rides the public internet).</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 8 · Troubleshooting "connection refused"</span>
+      <p class="qtext">Instance A can't reach Instance B in another subnet. You've checked routes. How do you confirm whether a firewall is dropping the packets — and where?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>Enable <strong>VPC Flow Logs</strong> (to CloudWatch Logs or S3) and look for <code>REJECT</code> records on the relevant ENIs/subnets. A reject points you at a <strong>NACL or Security Group</strong> rule to fix. Flow Logs are the standard tool for diagnosing connectivity, not for changing it.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 9 · Designing CIDR for future growth</span>
+      <p class="qtext">You're creating a new VPC that must peer with an existing <code>10.1.0.0/16</code> VPC later. What must you avoid when choosing the CIDR?</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>Avoid an <strong>overlapping CIDR</strong> — peering requires non-overlapping ranges. Pick e.g. <code>10.2.0.0/16</code>, not anything inside <code>10.1.0.0/16</code>. Overlapping ranges can never be peered (or VPN-connected) because the routes would be ambiguous.</p>
+    </div>
+
+    <div class="qcard">
+      <span class="qlabel">Scenario 10 · Highly available web app layout</span>
+      <p class="qtext">Design subnet placement for a 3-tier web app that must survive the loss of an entire Availability Zone.</p>
+    </div>
+    <div class="callout green">
+      <span class="ico">✅</span>
+      <p>Span <strong>at least two AZs</strong>. In each AZ: a <strong>public subnet</strong> (for the ALB and NAT Gateway) and <strong>private subnets</strong> for the app tier (Auto Scaling group) and data tier (RDS Multi-AZ, ElastiCache). If one AZ fails, the ELB routes to healthy instances in the other AZ. Subnets are AZ-scoped, so multi-AZ placement is what delivers the resilience.</p>
+    </div>
+
+    <!-- ============ QUIZ ============ -->
+    <h2 id="quiz">14 · Practice quiz (22 questions)</h2>
+    <p>Click an option to answer. The correct choice turns green; a wrong pick turns red and the right one is shown, with a short explanation.</p>
+    <div class="quiz-meta">
+      <span class="quiz-score" id="score">Score: 0 / 0</span>
+      <button class="quiz-reset" id="reset">Reset quiz</button>
+    </div>
+    <div id="quiz"></div>
+
+  </div>
+
+  <footer>
+    Notes compiled from the &ldquo;Amazon VPC — Basics&rdquo; course slides (Stephane Maarek / datacumulus.com, used for study) and the shared ChatGPT conversation on VPC, plus 10 scenario questions and a 22-question practice quiz. Diagrams are simplified recreations of the slides. Always verify against official AWS documentation.
+  </footer>
+</div>
+
+<script>
+const QUIZ = [
+ {q:"A VPC is a __ resource, and a Subnet is a __ resource.",
+  o:["Availability Zone; Regional","Regional; Availability Zone","Regional; Regional","Global; Regional"],a:1,
+  e:"A VPC spans a Region (all its AZs); a subnet lives in exactly one Availability Zone."},
+ {q:"What actually makes a subnet 'public'?",
+  o:["Choosing 'public' when creating it","Its route table sends 0.0.0.0/0 to an Internet Gateway","Attaching a NAT Gateway","Giving instances Elastic IPs"],a:1,
+  e:"A subnet is public only if its route table routes internet-bound traffic (0.0.0.0/0) to an Internet Gateway."},
+ {q:"Instances in a PRIVATE subnet need to download updates from the internet but must stay unreachable from outside. Use:",
+  o:["An Internet Gateway route in the subnet","A NAT Gateway (in a public subnet) with a default route","A VPC Peering connection","A second Internet Gateway"],a:1,
+  e:"A NAT Gateway allows outbound-initiated traffic only, keeping the instances private while letting them reach the internet."},
+ {q:"Which firewall is STATELESS and requires you to allow return traffic explicitly?",
+  o:["Security Group","Network ACL","Both","Neither"],a:1,
+  e:"NACLs are stateless, so you must allow the outbound ephemeral ports for responses. Security Groups are stateful."},
+ {q:"Which firewall can have explicit DENY rules?",
+  o:["Security Group","Network ACL","Both","Neither"],a:1,
+  e:"NACLs support allow AND deny rules; Security Groups support allow rules only."},
+ {q:"At which level does a Security Group operate?",
+  o:["Subnet level","Instance / ENI level","VPC level","Region level"],a:1,
+  e:"Security Groups operate at the instance (ENI) level; NACLs operate at the subnet level."},
+ {q:"You want one rule to block a single malicious IP for an ENTIRE subnet. Use:",
+  o:["A Security Group allow rule","A NACL deny rule","A route table entry","A VPC endpoint"],a:1,
+  e:"NACLs apply to the whole subnet and support deny rules; Security Groups can't deny and are per-instance."},
+ {q:"App instances should accept traffic only from the ALB whose IPs change. Best inbound source?",
+  o:["The ALB's IP range, hard-coded","The ALB's Security Group (referenced in the SG rule)","0.0.0.0/0","A NACL allow rule for the ALB subnet"],a:1,
+  e:"Security Groups can reference other Security Groups, which survives IP changes automatically."},
+ {q:"VPC Endpoint GATEWAY supports which services?",
+  o:["All AWS services","S3 and DynamoDB only","EC2 and Lambda","CloudWatch and SNS"],a:1,
+  e:"Gateway Endpoints are only for S3 and DynamoDB. Interface Endpoints cover most other services."},
+ {q:"A private instance must reach S3 with no Internet Gateway or NAT, at lowest cost. Use:",
+  o:["Interface Endpoint","Gateway Endpoint for S3","NAT Gateway","Site-to-Site VPN"],a:1,
+  e:"The S3 Gateway Endpoint keeps traffic on AWS's private network, needs no IGW/NAT, and has no hourly charge."},
+ {q:"VPC Peering between VPC A–B and B–C means A can reach C automatically. True or false?",
+  o:["True","False"],a:1,
+  e:"Peering is NOT transitive. A direct A–C peering (and route table updates) is required."},
+ {q:"Two VPCs you want to peer must have:",
+  o:["The same CIDR block","Non-overlapping CIDR blocks","Internet Gateways","NAT Gateways"],a:1,
+  e:"Overlapping IP ranges can't be routed across a peering connection, so CIDRs must not overlap."},
+ {q:"You need to diagnose WHY two instances can't communicate. Best first tool?",
+  o:["VPC Flow Logs","CloudTrail","AWS Config","Trusted Advisor"],a:0,
+  e:"Flow Logs capture IP traffic (ACCEPT/REJECT) at VPC, subnet, and ENI level — ideal for connectivity troubleshooting."},
+ {q:"VPC Flow Logs can be delivered to which destinations?",
+  o:["S3 only","CloudWatch Logs only","S3, CloudWatch Logs, and Kinesis Data Firehose","DynamoDB and SNS"],a:2,
+  e:"Flow Log data can go to S3, CloudWatch Logs, and Kinesis Data Firehose."},
+ {q:"Which hybrid connection goes over the PUBLIC internet but is automatically encrypted?",
+  o:["Direct Connect","Site-to-Site VPN","VPC Peering","Interface Endpoint"],a:1,
+  e:"Site-to-Site VPN runs over the public internet and is automatically encrypted. Direct Connect is a private physical link."},
+ {q:"A bank needs a private, fast, consistent link to AWS and can wait ~a month to set it up. Recommend:",
+  o:["Site-to-Site VPN","Direct Connect","VPC Peering","NAT Gateway"],a:1,
+  e:"Direct Connect is private, fast and consistent, but takes at least a month to establish."},
+ {q:"In a typical 3-tier architecture, the internet-facing ELB sits in the:",
+  o:["Private subnets","Public subnets","Data subnet","NAT subnet"],a:1,
+  e:"The ELB is internet-facing, so it lives in public subnets; app and data tiers stay in private subnets."},
+ {q:"Which statement about NACL rule processing is correct?",
+  o:["All rules are evaluated before deciding","Rules are processed in number order","Only the last rule applies","Deny rules are ignored"],a:1,
+  e:"NACLs process rules in number order; the first matching rule wins. Security Groups evaluate all rules."},
+ {q:"How many IP addresses does AWS reserve in every subnet?",
+  o:["2","5","8","0"],a:1,
+  e:"AWS reserves 5 addresses per subnet (the first four and the last), so a /24 has 251 usable IPs."},
+ {q:"To make a 3-tier web app survive the loss of one Availability Zone, you should:",
+  o:["Use a bigger instance type","Deploy subnets and resources across at least two AZs","Enable VPC Flow Logs","Add a second Internet Gateway"],a:1,
+  e:"Subnets are AZ-scoped; spreading public/private subnets and resources across multiple AZs delivers the resilience."},
+ {q:"EC2 web instances must accept port 80 ONLY from the ALB (VPC CIDR 192.168.0.0/18). The best inbound rule source is:",
+  o:["80 from 0.0.0.0/0","80 from 192.168.0.0/18","80 from the ALB's Security Group","80 from each EC2 private IP"],a:2,
+  e:"Reference the ALB's Security Group: 0.0.0.0/0 lets the internet bypass the ALB, and the VPC CIDR lets everything in the VPC reach the instances."},
+ {q:"Which AWS service is the managed, MongoDB-compatible database (since RDS doesn't run MongoDB)?",
+  o:["Amazon DocumentDB","Amazon Aurora","Amazon Redshift","Amazon Neptune"],a:0,
+  e:"RDS is for relational engines; Amazon DocumentDB provides MongoDB-compatible (NoSQL document) workloads."}
+];
+
+let answered = new Array(QUIZ.length).fill(false);
+let correctCount = 0;
+
+function render(){
+  const root = document.getElementById('quiz');
+  root.innerHTML = '';
+  QUIZ.forEach((item, i)=>{
+    const card = document.createElement('div');
+    card.className = 'quiz-q';
+    card.id = 'q'+i;
+    const opts = item.o.map((t,j)=>
+      `<div class="opt" data-q="${i}" data-o="${j}"><span class="dot"></span><span class="txt">${t}</span></div>`).join('');
+    card.innerHTML = `<span class="qn">Question ${i+1}</span>
+      <p class="qbody">${item.q}</p>
+      <div class="opts-wrap">${opts}</div>
+      <div class="exp"><b>Correct:</b> ${item.o[item.a]}. ${item.e}</div>`;
+    root.appendChild(card);
+  });
+  document.querySelectorAll('.opt').forEach(el=>el.addEventListener('click', choose));
+  updateScore();
+}
+
+function choose(e){
+  const el = e.currentTarget;
+  const qi = +el.dataset.q, oi = +el.dataset.o;
+  if(answered[qi]) return;
+  answered[qi] = true;
+  const card = document.getElementById('q'+qi);
+  const correct = QUIZ[qi].a;
+  card.classList.add('done');
+  card.querySelectorAll('.opt').forEach(o=>{
+    const j = +o.dataset.o;
+    if(j === correct) o.classList.add('correct');
+    else if(j === oi) o.classList.add('wrong');
+  });
+  if(oi === correct) correctCount++;
+  updateScore();
+}
+
+function updateScore(){
+  const done = answered.filter(Boolean).length;
+  document.getElementById('score').textContent = `Score: ${correctCount} / ${done}  (of ${QUIZ.length})`;
+}
+
+document.getElementById('reset').addEventListener('click', ()=>{
+  answered = new Array(QUIZ.length).fill(false);
+  correctCount = 0;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
